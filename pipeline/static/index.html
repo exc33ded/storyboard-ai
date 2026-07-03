@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="author" content="Mohammed Sarim" />
+<title>Storyboard AI — Ink &amp; Motion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f2ecdf;
+    --paper-2: #ebe2cf;
+    --paper-3: #e4d9c3;
+    --ink: #211b15;
+    --ink-soft: #57493c;
+    --ink-faint: #57493c99;
+    --seal: #a4342c;
+    --seal-soft: #a4342c1a;
+    --line: #211b1522;
+    --line-strong: #211b1544;
+    --serif: "Cormorant Garamond", Georgia, serif;
+    --sans: "Inter", system-ui, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--seal); color: var(--paper); }
+
+  /* film grain */
+  .grain {
+    position: fixed; inset: -50%;
+    width: 200%; height: 200%;
+    pointer-events: none; z-index: 90; opacity: .5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    animation: grain 8s steps(10) infinite;
+  }
+  @keyframes grain {
+    0%, 100% { transform: translate(0); }
+    20% { transform: translate(-3%, 2%); }
+    40% { transform: translate(2%, -3%); }
+    60% { transform: translate(-2%, -2%); }
+    80% { transform: translate(3%, 3%); }
+  }
+
+  main { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 20px 120px; }
+
+  /* --- hero --- */
+  header.hero { text-align: center; padding: 72px 0 56px; }
+  .kicker {
+    font-size: 12px;
+    letter-spacing: .5em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 22px;
+    animation: rise .8s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .kicker .seal-dot {
+    display: inline-grid; place-items: center;
+    width: 30px; height: 30px;
+    background: var(--seal); color: var(--paper);
+    font-family: var(--serif); font-size: 17px; font-weight: 600;
+    border-radius: 5px;
+    transform: rotate(-4deg);
+    margin-right: 14px; vertical-align: middle;
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px #a4342c55;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(44px, 8vw, 68px);
+    line-height: 1.04;
+    letter-spacing: -.01em;
+    animation: rise .8s .08s cubic-bezier(.2,.7,.2,1) both;
+  }
+  h1 em { font-style: italic; color: var(--seal); }
+  p.subtitle {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-style: italic;
+    color: var(--ink-soft);
+    margin-top: 16px;
+    animation: rise .8s .16s cubic-bezier(.2,.7,.2,1) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* --- panels --- */
+  .panel {
+    background: #f7f2e7;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 2px #211b1508, 0 12px 32px -18px #211b1526;
+    animation: rise .8s .24s cubic-bezier(.2,.7,.2,1) both;
+  }
+  .panel-title {
+    font-size: 11px;
+    letter-spacing: .42em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 26px;
+  }
+  .panel-title::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  label { display: block; font-size: 13px; font-weight: 500; letter-spacing: .06em; margin-bottom: 8px; }
+  .field { margin-bottom: 24px; }
+  .hint { font-size: 12.5px; color: var(--ink-faint); margin-top: 7px; line-height: 1.55; }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--line-strong);
+    border-radius: 0;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 19px;
+    padding: 8px 2px 10px;
+    resize: vertical;
+    transition: border-color .3s;
+  }
+  textarea { min-height: 64px; line-height: 1.45; }
+  textarea::placeholder, input::placeholder { color: #57493c66; font-style: italic; }
+  textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-bottom-color: var(--seal);
+  }
+  textarea:focus-visible, input:focus-visible, button:focus-visible, .switch input:focus-visible ~ .track {
+    outline: 2px solid var(--seal); outline-offset: 3px;
+  }
+
+  /* radio pills */
+  .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .radio-group label {
+    display: flex; align-items: center;
+    border: 1px solid var(--line-strong);
+    border-radius: 99px;
+    padding: 10px 20px;
+    font-weight: 400;
+    font-size: 13.5px;
+    letter-spacing: .04em;
+    cursor: pointer;
+    margin: 0;
+    color: var(--ink-soft);
+    transition: all .25s cubic-bezier(.7,0,.2,1);
+    user-select: none;
+  }
+  .radio-group input { position: absolute; opacity: 0; }
+  .radio-group label:hover { border-color: var(--ink); color: var(--ink); }
+  .radio-group label:has(input:checked) {
+    background: var(--ink); color: var(--paper); border-color: var(--ink);
+  }
+  .radio-group label:has(input:focus-visible) { outline: 2px solid var(--seal); outline-offset: 3px; }
+
+  /* toggles */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .toggle-row:last-of-type { border-bottom: none; }
+  .toggle-row .label-text { font-size: 14.5px; font-weight: 500; letter-spacing: .02em; }
+  .toggle-row .desc { font-size: 12.5px; color: var(--ink-faint); margin-top: 3px; line-height: 1.5; }
+
+  .switch { position: relative; width: 46px; height: 26px; flex-shrink: 0; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 2; }
+  .switch .track {
+    position: absolute; inset: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 99px;
+    background: transparent;
+    transition: all .3s cubic-bezier(.7,0,.2,1);
+  }
+  .switch .thumb {
+    position: absolute; top: 5px; left: 5px;
+    width: 16px; height: 16px;
+    background: var(--ink-soft);
+    border-radius: 50%;
+    transition: all .3s cubic-bezier(.7,0,.2,1);
+  }
+  .switch input:checked ~ .track { background: var(--ink); border-color: var(--ink); }
+  .switch input:checked ~ .thumb { transform: translateX(20px); background: var(--paper); }
+  .switch input:disabled ~ .track { opacity: .4; }
+  .switch input:disabled ~ .thumb { opacity: .4; }
+  .switch input:disabled { cursor: not-allowed; }
+
+  /* CTA */
+  button.primary {
+    width: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 99px;
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    padding: 18px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all .35s cubic-bezier(.7,0,.2,1);
+  }
+  button.primary::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: var(--seal);
+    transform: scaleX(0); transform-origin: right;
+    transition: transform .45s cubic-bezier(.7,0,.2,1);
+  }
+  button.primary span { position: relative; z-index: 1; }
+  button.primary:hover:not(:disabled)::after { transform: scaleX(1); transform-origin: left; }
+  button.primary:hover:not(:disabled) { border-color: var(--seal); }
+  button.primary:active:not(:disabled) { transform: scale(.985); }
+  button.primary:disabled { opacity: .45; cursor: not-allowed; }
+
+  .hidden { display: none !important; }
+
+  /* progress */
+  #stage-text {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-style: italic;
+    margin-bottom: 18px;
+  }
+  .progress-track {
+    width: 100%; height: 2px;
+    background: var(--line);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .progress-track.small { margin: 8px 0 4px; }
+  .progress-fill {
+    height: 100%;
+    background: var(--seal);
+    transition: width .6s cubic-bezier(.2,.7,.2,1);
+    width: 0%;
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .brush-anim {
+    display: inline-block;
+    width: 20px; height: 20px;
+    margin-right: 10px; vertical-align: -4px;
+    animation: brush 1.6s ease-in-out infinite;
+  }
+  @keyframes brush {
+    0%, 100% { transform: rotate(-6deg); }
+    50% { transform: rotate(8deg) translateY(-2px); }
+  }
+
+  /* usage */
+  .usage-row { margin-bottom: 20px; }
+  .usage-row:last-child { margin-bottom: 0; }
+  .usage-label { display: flex; justify-content: space-between; align-items: baseline; font-size: 13.5px; }
+  .usage-label .val { color: var(--ink-faint); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .info-btn {
+    display: inline-grid; place-items: center;
+    width: 17px; height: 17px;
+    margin-left: 7px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--ink-faint);
+    font-family: var(--serif); font-size: 11px; font-style: italic;
+    line-height: 1; padding: 0; cursor: help;
+    vertical-align: -2px;
+    transition: all .25s;
+  }
+  .info-btn:hover, .info-btn:focus-visible { color: var(--seal); border-color: var(--seal); }
+  a.quiet-link { color: var(--seal); text-decoration: none; border-bottom: 1px solid #a4342c44; transition: border-color .25s; }
+  a.quiet-link:hover { border-bottom-color: var(--seal); }
+
+  /* error */
+  .error-box {
+    border: 1px solid #a4342c55;
+    background: var(--seal-soft);
+    color: var(--seal);
+    border-radius: 4px;
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+
+  /* result */
+  video { width: 100%; border-radius: 4px; display: block; margin-bottom: 18px; border: 1px solid var(--line); }
+  #montage-img { width: 100%; border-radius: 4px; margin-bottom: 18px; border: 1px solid var(--line); }
+  .result-caption {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+    margin: -8px 0 18px;
+  }
+  a.download {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+    padding-bottom: 4px;
+    position: relative;
+  }
+  a.download::after {
+    content: "";
+    position: absolute; left: 0; bottom: 0;
+    width: 100%; height: 1px;
+    background: var(--seal);
+    transform: scaleX(0); transform-origin: right;
+    transition: transform .45s cubic-bezier(.7,0,.2,1);
+  }
+  a.download:hover::after { transform: scaleX(1); transform-origin: left; }
+
+  footer {
+    text-align: center;
+    margin-top: 72px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-faint);
+  }
+  footer strong { font-style: normal; font-weight: 500; color: var(--ink-soft); letter-spacing: .04em; }
+
+  @media (max-width: 480px) {
+    .panel { padding: 24px 20px; }
+    header.hero { padding: 52px 0 40px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<main>
+  <header class="hero">
+    <div class="kicker"><span class="seal-dot" aria-hidden="true">絵</span>Whiteboard stories, drawn by hand</div>
+    <h1>Storyboard <em>AI</em></h1>
+    <p class="subtitle">A topic becomes a narrated whiteboard film — researched, drawn, and voiced.</p>
+  </header>
+
+  <form id="gen-form" class="panel">
+    <div class="panel-title">Compose</div>
+
+    <div class="field">
+      <label for="topic">Topic</label>
+      <textarea id="topic" required placeholder="e.g. how bees make honey"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Research mode</label>
+      <div class="radio-group">
+        <label><input type="radio" name="research_mode" value="deep"> Deep research</label>
+        <label><input type="radio" name="research_mode" value="web" checked> Web search</label>
+        <label><input type="radio" name="research_mode" value="none"> None</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="language">Narration language</label>
+      <input type="text" id="language" value="english" />
+    </div>
+
+    <div class="field">
+      <label for="target_duration">Target length (minutes)</label>
+      <input type="text" id="target_duration" inputmode="decimal" placeholder="leave blank to let the Director decide" />
+      <div class="hint">Approximate — the Director prioritizes a coherent story over hitting this exactly.</div>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="label-text">Internet image search</div>
+        <div class="desc">Fetch reference photos for real-world subjects</div>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="use_internet_image_search" checked />
+        <div class="track"></div><div class="thumb"></div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="label-text">Background music</div>
+        <div class="desc" id="music-desc">Mix assets/background_music.mp3 quietly under the narration</div>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="background_music" />
+        <div class="track"></div><div class="thumb"></div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="label-text">Fast mode</div>
+        <div class="desc">Generate scenes in parallel (uses more resources at once)</div>
+      </div>
+      <div class="switch">
+        <input type="checkbox" id="fast_mode" />
+        <div class="track"></div><div class="thumb"></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 28px;">
+      <button type="submit" class="primary" id="submit-btn"><span>Generate the film</span></button>
+    </div>
+  </form>
+
+  <section class="panel" id="usage-card">
+    <div class="panel-title">API usage</div>
+
+    <div class="usage-row">
+      <div class="usage-label">
+        <span>
+          Groq · vision
+          <button type="button" class="info-btn" id="groq-info-btn" aria-label="When this limit resets" title="No requests made yet">i</button>
+        </span>
+        <span class="val" id="groq-usage-text">—</span>
+      </div>
+      <div class="progress-track small"><div class="progress-fill" id="groq-usage-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="usage-row">
+      <div class="usage-label">
+        <span>Hugging Face · image generation</span>
+        <span class="val" id="hf-usage-text">0 images generated this session</span>
+      </div>
+      <div class="hint">
+        Each scene generates one image, spending a little of your monthly HF credit.
+        HF doesn't report remaining credit per request, so only a session count is shown —
+        see exact usage at
+        <a class="quiet-link" href="https://huggingface.co/settings/billing" target="_blank" rel="noopener">huggingface.co/settings/billing</a>.
+      </div>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="progress-card" aria-live="polite">
+    <div class="panel-title">Drawing</div>
+    <div id="stage-text"><svg class="brush-anim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M4 20c4-1 3-4 6-7l7-7 1 1-7 7c-3 3-6 2-7 6z"/><path d="M14.5 5.5l4 4"/></svg>Starting…</div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-meta">
+      <span id="percent-text">0%</span>
+      <span id="eta-text">Estimating time remaining…</span>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="error-card">
+    <div class="panel-title">Interrupted</div>
+    <div class="error-box" id="error-text"></div>
+    <button class="primary" id="retry-btn"><span>Try again</span></button>
+  </section>
+
+  <section class="panel hidden" id="result-card">
+    <div class="panel-title">The film</div>
+    <video id="result-video" controls></video>
+    <img id="montage-img" class="hidden" alt="All scenes on one canvas" />
+    <p class="result-caption hidden" id="montage-caption">Every scene, on one canvas.</p>
+    <a class="download" id="download-link" download="storyboard.mp4">Download video</a>
+  </section>
+
+  <footer>
+    Crafted by <strong>Mohammed Sarim</strong> — ink, motion &amp; machines.
+  </footer>
+</main>
+
+<script>
+  const form = document.getElementById('gen-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const progressCard = document.getElementById('progress-card');
+  const errorCard = document.getElementById('error-card');
+  const resultCard = document.getElementById('result-card');
+  const stageText = document.getElementById('stage-text');
+  const progressFill = document.getElementById('progress-fill');
+  const percentText = document.getElementById('percent-text');
+  const etaText = document.getElementById('eta-text');
+  const errorText = document.getElementById('error-text');
+  const resultVideo = document.getElementById('result-video');
+  const downloadLink = document.getElementById('download-link');
+
+  const brushSvg = stageText.querySelector('.brush-anim').outerHTML;
+  let pollHandle = null;
+
+  function fmtEta(seconds) {
+    if (seconds == null) return 'Estimating time remaining…';
+    if (seconds < 60) return `~${seconds}s remaining`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `~${m}m ${s}s remaining`;
+  }
+
+  function setStage(text) {
+    stageText.innerHTML = brushSvg;
+    stageText.appendChild(document.createTextNode(text));
+  }
+
+  function resetPanels() {
+    progressCard.classList.add('hidden');
+    errorCard.classList.add('hidden');
+    resultCard.classList.add('hidden');
+  }
+
+  async function poll(jobId) {
+    try {
+      const res = await fetch(`/api/status/${jobId}`);
+      const data = await res.json();
+
+      setStage(data.stage);
+      progressFill.style.width = data.percent + '%';
+      percentText.textContent = data.percent + '%';
+      etaText.textContent = fmtEta(data.eta_seconds);
+
+      if (data.status === 'done') {
+        clearInterval(pollHandle);
+        progressCard.classList.add('hidden');
+        resultVideo.src = data.video_url;
+        downloadLink.href = data.video_url;
+        const montageImg = document.getElementById('montage-img');
+        if (data.montage_url) {
+          montageImg.src = data.montage_url;
+          montageImg.classList.remove('hidden');
+          document.getElementById('montage-caption').classList.remove('hidden');
+        }
+        resultCard.classList.remove('hidden');
+        submitBtn.disabled = false;
+      } else if (data.status === 'error') {
+        clearInterval(pollHandle);
+        progressCard.classList.add('hidden');
+        errorText.textContent = data.error || 'Something went wrong.';
+        errorCard.classList.remove('hidden');
+        submitBtn.disabled = false;
+      }
+    } catch (e) {
+      // transient network hiccup — keep polling
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetPanels();
+    submitBtn.disabled = true;
+    progressCard.classList.remove('hidden');
+    setStage('Starting pipeline…');
+    progressFill.style.width = '0%';
+    percentText.textContent = '0%';
+    etaText.textContent = 'Estimating time remaining…';
+    progressCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const body = {
+      topic: document.getElementById('topic').value,
+      research_mode: document.querySelector('input[name="research_mode"]:checked').value,
+      use_internet_image_search: document.getElementById('use_internet_image_search').checked,
+      fast_mode: document.getElementById('fast_mode').checked,
+      background_music: document.getElementById('background_music').checked,
+      language: document.getElementById('language').value || 'english',
+      target_duration_minutes: parseFloat(document.getElementById('target_duration').value) || null,
+      enable_veo: false,
+      veo_direction_by_director: false,
+    };
+
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const { job_id } = await res.json();
+    pollHandle = setInterval(() => poll(job_id), 1500);
+    poll(job_id);
+  });
+
+  document.getElementById('retry-btn').addEventListener('click', () => {
+    resetPanels();
+    submitBtn.disabled = false;
+  });
+
+  const groqUsageText = document.getElementById('groq-usage-text');
+  const groqUsageFill = document.getElementById('groq-usage-fill');
+  const groqInfoBtn = document.getElementById('groq-info-btn');
+  const hfUsageText = document.getElementById('hf-usage-text');
+
+  async function refreshUsage() {
+    try {
+      const res = await fetch('/api/usage');
+      const data = await res.json();
+      const groq = data.groq;
+
+      if (groq.percent_remaining != null) {
+        groqUsageFill.style.width = groq.percent_remaining + '%';
+        groqUsageFill.style.background = groq.percent_remaining < 20 ? 'var(--seal)' : 'var(--ink)';
+        groqUsageText.textContent = `${groq.remaining_requests}/${groq.limit_requests} requests left`;
+        groqInfoBtn.title = `Requests reset in ${groq.reset_requests} · Tokens reset in ${groq.reset_tokens}`;
+      } else {
+        groqUsageText.textContent = 'No calls made yet';
+        groqInfoBtn.title = 'No requests made yet';
+      }
+
+      hfUsageText.textContent = `${data.hf_calls} image${data.hf_calls === 1 ? '' : 's'} generated this session`;
+    } catch (e) {
+      // ignore transient errors
+    }
+  }
+
+  refreshUsage();
+  setInterval(refreshUsage, 5000);
+
+  // Warn up front if the music toggle has no track to play
+  fetch('/api/music-available').then(r => r.json()).then(d => {
+    if (!d.available) {
+      const desc = document.getElementById('music-desc');
+      desc.textContent = 'No track found — drop a file at assets/background_music.mp3 to enable';
+      desc.style.color = 'var(--seal)';
+      document.getElementById('background_music').disabled = true;
+    }
+  }).catch(() => {});
+</script>
+</body>
+</html>

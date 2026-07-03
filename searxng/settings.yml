@@ -1,0 +1,12 @@
+# SearXNG config for Storyboard AI — minimal overrides on top of defaults.
+# The json format is what the pipeline's search integration talks to.
+use_default_settings: true
+
+server:
+  secret_key: "894e43e068390ef9273abfbd17d527179f706a573676c015e834d0f001bec908"
+  limiter: false  # local single-user instance, no bot protection needed
+
+search:
+  formats:
+    - html
+    - json

@@ -1,0 +1,14 @@
+# Core Storyboard AI Pipeline Requirements
+google-genai
+google-adk
+python-dotenv
+opencv-python
+numpy
+Pillow
+requests
+openai
+kokoro
+soundfile
+ddgs
+huggingface_hub
+faster-whisper
