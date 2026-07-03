@@ -119,6 +119,9 @@ uv run uvicorn webapp:app --port 8000
 
 Open http://127.0.0.1:8000 — enter a topic, pick options, watch progress with a live ETA, and download the finished video.
 
+> [!NOTE]
+> The **target length is approximate**. The Director prioritizes a coherent story over hitting the number exactly, so the final video can run noticeably longer (roughly up to ~40% over) or shorter than requested.
+
 ### CLI
 
 ```bash
