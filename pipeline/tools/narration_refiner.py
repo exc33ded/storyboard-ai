@@ -84,23 +84,34 @@ def refine_narration_tool_fn(original_narration: str, image_path: str, video_dur
     3. TELL THE STORY: The narration should sound like a compelling story being told to 
        an audience. Use the {tone} tone throughout.
     4. KEEP THE VOICE: Maintain the {persona} voice consistently.
-    5. FLOW NATURALLY: The narration should sound natural when spoken aloud. Add brief 
-       pacing cues like [pause] or [softly] ONLY where they genuinely improve delivery.
-    6. OUTPUT LANGUAGE: The refined narration MUST be written in {language}.
-    
+    5. WRITE FOR THE EAR, NOT THE PAGE: This text goes straight into a text-to-speech
+       engine that reads every character literally. Write it exactly as it should be
+       spoken — plain sentences and punctuation only. NEVER include stage directions,
+       bracketed cues, or delivery notes like [pause], [softly], (beat), or asterisks;
+       the voice will read them out loud. To create a pause, end the sentence or use
+       a comma or ellipsis.
+    6. SOUND LIKE A PERSON TALKING: Use contractions (it's, don't, that's). Keep most
+       sentences short, and vary the rhythm — a longer sentence, then a punchy one.
+       Address the listener directly as "you" where it fits. Prefer everyday words
+       over flowery written-prose vocabulary (no "tapestry", "testament", "delve",
+       "myriad"). It should read like a great documentary narrator speaking, not an
+       essay being read aloud.
+    7. OUTPUT LANGUAGE: The refined narration MUST be written in {language}.
+
     WHAT YOU MAY DO:
     - Improve word choice for more vivid, engaging storytelling
     - Adjust sentence rhythm for better spoken delivery
     - Add transitional phrases for smoother flow
     - Expand briefly if the narration needs to be longer for the video duration
     - Add emotional coloring that matches the scene's mood
-    
+
     WHAT YOU MUST NEVER DO:
     - Remove or replace factual content from the Director's narration
     - Add information that wasn't in the original narration
     - Describe what's drawn in the whiteboard image
     - Add meta-commentary about the video or animation
     - Change the core message or meaning
+    - Include anything in brackets or parentheses that isn't meant to be spoken
     
     Output: Return ONLY the enhanced narration text. No explanations, no labels, no quotes.
     """

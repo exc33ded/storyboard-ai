@@ -35,9 +35,10 @@ IMAGE_GEN_MODEL = os.getenv("IMAGE_GEN_MODEL", "black-forest-labs/FLUX.1-schnell
 # Token: log in at puter.com → DevTools → Application → Local Storage → puter.auth.token
 PUTER_AUTH_TOKEN = os.getenv("PUTER_AUTH_TOKEN")
 # Comma-separated priority list — first model that works is used.
+# Gemini first: it renders in-image text/spelling far better than FLUX.
 PUTER_IMAGE_MODELS = os.getenv(
     "PUTER_IMAGE_MODELS",
-    "black-forest-labs/flux-schnell,gpt-image-1-mini,gemini-3.1-flash-image-preview",
+    "gemini-3.1-flash-image-preview,gemini-2.5-flash-image,gpt-image-1-mini,black-forest-labs/flux-schnell",
 )
 
 # --- TTS: Kokoro (local, open-source, CPU-friendly) ---

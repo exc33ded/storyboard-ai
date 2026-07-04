@@ -34,6 +34,9 @@ class GenerateRequest(BaseModel):
     veo_direction_by_director: bool = True
     target_duration_minutes: float | None = None
     background_music: bool = False
+    voice_one: str | None = None
+    voice_two: str | None = None
+    tts_speed: float = 1.0
 
 
 def _run_job(job_id: str, req: GenerateRequest):
@@ -61,6 +64,9 @@ def _run_job(job_id: str, req: GenerateRequest):
             veo_direction_by_director=req.veo_direction_by_director,
             target_duration_minutes=req.target_duration_minutes,
             background_music=req.background_music,
+            voice_one=req.voice_one,
+            voice_two=req.voice_two,
+            tts_speed=req.tts_speed,
             on_progress=on_progress,
         )
         if result and os.path.exists(result):

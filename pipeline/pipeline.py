@@ -111,7 +111,7 @@ def _mix_background_music(video_path: str, output_dir: str) -> str:
 
 STEPS_PER_SCENE = 7  # prompt, image, segmentation, animation, narration, tts, merge+subtitles
 
-def run_pipeline(user_context: str, do_research: bool = True, do_web_search: bool = False, use_internet_image_search: bool = True, fast_mode: bool = False, language: str = "english", enable_veo: bool = False, veo_direction_by_director: bool = False, target_duration_minutes: float = None, background_music: bool = False, on_progress=None):
+def run_pipeline(user_context: str, do_research: bool = True, do_web_search: bool = False, use_internet_image_search: bool = True, fast_mode: bool = False, language: str = "english", enable_veo: bool = False, veo_direction_by_director: bool = False, target_duration_minutes: float = None, background_music: bool = False, voice_one: str = None, voice_two: str = None, tts_speed: float = 1.0, on_progress=None):
     """
     on_progress(stage: str, done: int, total: int) is called after each major
     step if provided. Purely additive — CLI usage is unaffected when omitted.
@@ -337,6 +337,7 @@ def run_pipeline(user_context: str, do_research: bool = True, do_web_search: boo
             print(f"Scene {scene_num}: Generating narration audio...")
             audio_path = _retry(
                 generate_tts_audio_tool_fn, narration, language=language,
+                voice_one=voice_one, voice_two=voice_two, speed=tts_speed,
                 label=f"Scene {scene_num} TTS", max_retries=3, delay=5.0
             )
             
