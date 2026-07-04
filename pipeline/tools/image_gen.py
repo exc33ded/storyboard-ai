@@ -57,6 +57,21 @@ def _puter_gen(prompt: str, output_path: str) -> str:
             print(f"  [!] Puter model {model} failed, trying next...")
     raise RuntimeError("all Puter models failed: " + " | ".join(errors)[:400])
 
+
+def _pollinations_gen(prompt: str, output_path: str) -> str:
+    """Free, keyless fallback: Pollinations.ai serves FLUX text-to-image."""
+    url = ("https://image.pollinations.ai/prompt/"
+           + urllib.parse.quote(prompt[:1500])
+           + "?width=1920&height=1080&nologo=true&model=flux")
+    r = requests.get(url, timeout=300)
+    r.raise_for_status()
+    if not r.headers.get("content-type", "").startswith("image/"):
+        raise RuntimeError(f"Pollinations returned non-image: {r.text[:200]}")
+    with open(output_path, "wb") as f:
+        f.write(r.content)
+    print("Image generated via Pollinations (free fallback)")
+    return output_path
+
 # ponytail: no web-search grounding equivalent wired up here (dropped Google Search
 # tool with the Gemini swap) — verification is vision-only now. Add a search step
 # if false positives on ambiguous subjects become a problem.
@@ -118,24 +133,25 @@ def image_gen_tool_fn(prompt: str, reference_image_path: str = None, subject_ref
     filename = f"generated_image_{timestamp}.png"
     output_path = os.path.join(utils.GLOBAL_OUTPUT_DIR, filename) if utils.GLOBAL_OUTPUT_DIR else filename
 
-    if not PUTER_AUTH_TOKEN and not _hf_client:
-        return "Error: set PUTER_AUTH_TOKEN or HF_API_KEY for image generation."
-
     if PUTER_AUTH_TOKEN:
         try:
             _puter_gen(full_prompt, output_path)
             print(f"Image generated via Puter and saved to: {output_path}")
             return output_path
         except Exception as e:
-            if not _hf_client:
-                return f"An error occurred during image generation: {e}"
-            print(f"  [!] Puter image gen failed ({e}) — falling back to Hugging Face.")
+            print(f"  [!] Puter image gen failed ({e}) — falling back.")
+
+    if _hf_client:
+        try:
+            image = _hf_client.text_to_image(full_prompt, model=IMAGE_GEN_MODEL)
+            utils.record_hf_call()
+            image.save(output_path)
+            print(f"Image generated and saved to: {output_path}")
+            return output_path
+        except Exception as e:
+            print(f"  [!] Hugging Face image gen failed ({e}) — falling back to Pollinations.")
 
     try:
-        image = _hf_client.text_to_image(full_prompt, model=IMAGE_GEN_MODEL)
-        utils.record_hf_call()
-        image.save(output_path)
-        print(f"Image generated and saved to: {output_path}")
-        return output_path
+        return _pollinations_gen(full_prompt, output_path)
     except Exception as e:
         return f"An error occurred during image generation: {str(e)}"
