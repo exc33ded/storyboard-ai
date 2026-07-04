@@ -1,8 +1,0 @@
-<!doctype html>
-<script src="https://js.puter.com/v2/"></script>
-<script>
-  window.generateImage = async ([prompt, model]) => {
-    const img = await puter.ai.txt2img(prompt, { model });
-    return img.src; // data URL
-  };
-</script>

@@ -139,9 +139,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Puter headless browser session (contains logged-in credentials)
-pipeline/tools/puter/puter-session/
-
 # User requested ignores
 pipeline/output/*
 !pipeline/output/README.md
