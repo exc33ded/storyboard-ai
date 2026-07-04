@@ -5,7 +5,7 @@ import threading
 import uuid
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel
 
 from pipeline import run_pipeline
@@ -148,6 +148,28 @@ def music_available():
         for ext in (".mp3", ".wav", ".m4a", ".ogg")
     )
     return {"available": found}
+
+
+_PREVIEW_TEXT = "Every great story starts with a single line on a blank whiteboard. Here's how this voice sounds."
+_preview_cache: dict[tuple, bytes] = {}
+
+
+@app.get("/api/voice-preview")
+def voice_preview(voice: str, speed: float = 1.0):
+    import re
+    if not re.fullmatch(r"[ab][fm]_[a-z]+", voice):
+        raise HTTPException(status_code=400, detail="Unknown voice id")
+    speed = max(0.5, min(2.0, speed))
+    key = (voice, round(speed, 2))
+    if key not in _preview_cache:
+        import io
+        import soundfile as sf
+        from tools.tts import _synthesize
+        audio = _synthesize(_PREVIEW_TEXT, voice, speed)
+        buf = io.BytesIO()
+        sf.write(buf, audio, 24000, format="WAV")
+        _preview_cache[key] = buf.getvalue()
+    return Response(content=_preview_cache[key], media_type="audio/wav")
 
 
 @app.get("/api/usage")
