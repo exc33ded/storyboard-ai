@@ -58,18 +58,18 @@ def _puter_gen(prompt: str, output_path: str) -> str:
     raise RuntimeError("all Puter models failed: " + " | ".join(errors)[:400])
 
 
-def _pollinations_gen(prompt: str, output_path: str) -> str:
-    """Free, keyless fallback: Pollinations.ai serves FLUX text-to-image."""
+def _pollinations_gen(prompt: str, output_path: str, seed: int = 42) -> str:
+    """Free, keyless: Pollinations.ai serves FLUX text-to-image."""
     url = ("https://image.pollinations.ai/prompt/"
            + urllib.parse.quote(prompt[:1500])
-           + "?width=1920&height=1080&nologo=true&model=flux")
+           + f"?width=1920&height=1080&nologo=true&model=flux&seed={seed}")
     r = requests.get(url, timeout=300)
     r.raise_for_status()
     if not r.headers.get("content-type", "").startswith("image/"):
         raise RuntimeError(f"Pollinations returned non-image: {r.text[:200]}")
     with open(output_path, "wb") as f:
         f.write(r.content)
-    print("Image generated via Pollinations (free fallback)")
+    print("Image generated via Pollinations")
     return output_path
 
 # ponytail: no web-search grounding equivalent wired up here (dropped Google Search
@@ -100,7 +100,31 @@ def _verify_image_makes_sense(image_path: str, context_prompt: str) -> bool:
         print(f"Warning: Image verification failed: {e}")
         return False
 
-def image_gen_tool_fn(prompt: str, reference_image_path: str = None, subject_reference_image_path: str = None) -> str:
+def _generate(full_prompt: str, output_path: str, seed: int) -> str:
+    """One generation attempt: Pollinations first, then Puter, then Hugging Face."""
+    try:
+        return _pollinations_gen(full_prompt, output_path, seed=seed)
+    except Exception as e:
+        print(f"  [!] Pollinations image gen failed ({e}) — falling back.")
+
+    if PUTER_AUTH_TOKEN:
+        try:
+            _puter_gen(full_prompt, output_path)
+            return output_path
+        except Exception as e:
+            print(f"  [!] Puter image gen failed ({e}) — falling back.")
+
+    if _hf_client:
+        image = _hf_client.text_to_image(full_prompt, model=IMAGE_GEN_MODEL)
+        utils.record_hf_call()
+        image.save(output_path)
+        print(f"Image generated via Hugging Face: {output_path}")
+        return output_path
+
+    raise RuntimeError("all image backends failed")
+
+
+def image_gen_tool_fn(prompt: str, reference_image_path: str = None, subject_reference_image_path: str = None, verify_context: str = None) -> str:
     """
     Generates a whiteboard animation image using FLUX.2 [klein] 4B via the
     Hugging Face Inference API.
@@ -109,6 +133,8 @@ def image_gen_tool_fn(prompt: str, reference_image_path: str = None, subject_ref
         prompt: The specific text prompt to generate an image for.
         reference_image_path: Optional path to a previously generated image for aesthetic consistency.
         subject_reference_image_path: Optional path to a real-world photo of the subject.
+        verify_context: If set (e.g. for diagram scenes), the generated image is checked with the
+            vision model against this description and regenerated once with a new seed on failure.
     Returns:
         The path to the generated image or an error message.
     """
@@ -133,25 +159,13 @@ def image_gen_tool_fn(prompt: str, reference_image_path: str = None, subject_ref
     filename = f"generated_image_{timestamp}.png"
     output_path = os.path.join(utils.GLOBAL_OUTPUT_DIR, filename) if utils.GLOBAL_OUTPUT_DIR else filename
 
-    if PUTER_AUTH_TOKEN:
-        try:
-            _puter_gen(full_prompt, output_path)
-            print(f"Image generated via Puter and saved to: {output_path}")
-            return output_path
-        except Exception as e:
-            print(f"  [!] Puter image gen failed ({e}) — falling back.")
-
-    if _hf_client:
-        try:
-            image = _hf_client.text_to_image(full_prompt, model=IMAGE_GEN_MODEL)
-            utils.record_hf_call()
-            image.save(output_path)
-            print(f"Image generated and saved to: {output_path}")
-            return output_path
-        except Exception as e:
-            print(f"  [!] Hugging Face image gen failed ({e}) — falling back to Pollinations.")
-
     try:
-        return _pollinations_gen(full_prompt, output_path)
+        result = _generate(full_prompt, output_path, seed=timestamp)
+        # ponytail: one verification retry only — more attempts triple latency for
+        # marginal gain; raise the retry count if bad diagrams still slip through.
+        if verify_context and not _verify_image_makes_sense(result, verify_context):
+            print("  [!] Generated image failed verification — regenerating once with a new seed.")
+            result = _generate(full_prompt, output_path, seed=timestamp + 1)
+        return result
     except Exception as e:
         return f"An error occurred during image generation: {str(e)}"

@@ -85,6 +85,25 @@ def director_tool_fn(user_instructions: str, research_material: str = None, lang
     - 'summary': A 1-line summary of what this scene accomplishes in the narrative arc
     - 'narration': The FULL spoken script for this scene. THIS IS THE MOST IMPORTANT PART.
     - 'description': Visual description for the image generator (what should be DRAWN in this frame)
+    - 'visual_beats': A list of 2-3 SHORT visual descriptions shown one after another while this
+      scene's narration plays. The visuals must change fast — do NOT hold one drawing for the whole
+      narration. Each beat is a separate drawable frame that ADDS a NEW piece of information
+      (a new fact, detail, or development the narration reaches at that moment), in the order the
+      narration covers them. The first beat may match 'description'. Never make beats mere
+      restylings of the same picture.
+    - 'visual_mode': Either "diagram" or "illustration". Use "diagram" whenever the scene explains a
+      technical structure, algorithm, data structure, system, or process (e.g. hash maps, linked lists,
+      network flows, water harvesting systems) — the viewer must SEE the actual structure, not a metaphor.
+      Use "illustration" for story moments, people, emotions, and real-world scenery.
+    - DIAGRAM SCENES (CRITICAL): 'description' and every 'visual_beats' entry must specify the EXACT
+      diagram to draw — every box, arrow, node, index, and label with its exact text in quotes.
+      Example: 'An array of 5 buckets labeled "0" to "4"; bucket "2" has an arrow to a node labeled
+      "cat: 9" which links with an arrow to a second node labeled "act: 4"'. Never write vague or
+      metaphorical descriptions like "a machine sorting items" for diagram scenes. Consecutive beats
+      build the SAME diagram step by step: each beat's description must restate the FULL cumulative
+      diagram (everything already drawn, plus the one new element or highlight), so consecutive frames
+      look identical except for the addition. Keep every label to 1-2 short words or a number — image
+      models garble long text.
     - 'visual_setup': Specific visual direction for this frame (composition, key elements, focal points)
     {veo_instruction}
     - 'search_query': (OPTIONAL) If this scene features a specific real-world person, historical figure, or landmark, provide a search query.
@@ -95,6 +114,12 @@ def director_tool_fn(user_instructions: str, research_material: str = None, lang
     CRITICAL RULES:
     - LANGUAGE: The entire script's narration and summary values MUST be written in {language}.
     - ATTRACTIVE PACING & TONE: You MUST detect pacing instructions from the user.
+    - INFORMATION FLOW: Every sentence of narration must add a NEW fact or move the story forward.
+      Never restate what was already said, and never pad with generic filler.
+    - KEEP CURIOSITY ALIVE: Every scene's narration EXCEPT the last must end on an open loop — an
+      unanswered question, a surprising tension, or a "but then..." that the NEXT scene resolves.
+      The viewer should be thinking "what happens next?" at every cut. Never close a scene with a
+      tidy summary. Only the final scene may resolve and conclude.
     
     Output Format (Strict JSON) where all values (specifically 'narration' and 'summary') are in the language '{language}', but the JSON keys remain exactly as defined below in English:
     {{
@@ -103,6 +128,7 @@ def director_tool_fn(user_instructions: str, research_material: str = None, lang
         "tone": "informative" | "dramatic" | "educational" | "cautionary",
         "narrative_persona": "e.g., Wise Storyteller",
         "visual_style": "e.g., Clean Whiteboard Animation",
+        "recurring_elements": "Recurring characters/objects reused across scenes, each described ONCE with fixed visual traits (e.g., 'a stick-figure engineer with round glasses and a hard hat'). Empty string if none.",
         "pacing": "e.g., steady/educational",
         "narrative_arc": "...",
         "target_audience": "...",
@@ -114,6 +140,8 @@ def director_tool_fn(user_instructions: str, research_material: str = None, lang
           "summary": "...",
           "narration": "...",
           "description": "...",
+          "visual_beats": ["...", "...", "..."],
+          "visual_mode": "diagram" | "illustration",
           "visual_setup": "...",{veo_schema_field}
           "search_query": "...",
           "text_overlay": "...",

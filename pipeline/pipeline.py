@@ -107,6 +107,26 @@ def _mix_background_music(video_path: str, output_dir: str) -> str:
     print(f"  [OK] Background music mixed in: {output_path}")
     return output_path
 
+def _concat_silent(video_paths: list, output_path: str) -> str:
+    """Concatenate silent videos back-to-back, normalized to 1280x720 @ 25fps."""
+    if len(video_paths) == 1:
+        return video_paths[0]
+    n = len(video_paths)
+    parts = [
+        f"[{i}:v]scale=1280:720:force_original_aspect_ratio=decrease,"
+        f"pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=25[v{i}]"
+        for i in range(n)
+    ]
+    parts.append("".join(f"[v{i}]" for i in range(n)) + f"concat=n={n}:v=1:a=0[v]")
+    cmd = ["ffmpeg", "-y"]
+    for vp in video_paths:
+        cmd.extend(["-i", vp])
+    cmd.extend(["-filter_complex", ";".join(parts), "-map", "[v]", "-pix_fmt", "yuv420p", output_path])
+    subprocess.run(cmd, capture_output=True, check=True)
+    if not os.path.exists(output_path):
+        raise RuntimeError("concat output file not found")
+    return output_path
+
 # --- Main Pipeline ---
 
 STEPS_PER_SCENE = 7  # prompt, image, segmentation, animation, narration, tts, merge+subtitles
@@ -219,33 +239,45 @@ def run_pipeline(user_context: str, do_research: bool = True, do_web_search: boo
             elif not use_internet_image_search and search_query:
                 print(f"Scene {scene_num}: Internet image search disabled. Skipping reference for '{search_query}'.")
             
-            # --- 3a. Generate Image Prompt (with retry) ---
-            print(f"Scene {scene_num}: Generating image prompt...")
-            img_prompt = _retry(
-                prompt_tool_fn, description, 
-                visual_setup=visual_setup, text_overlay=text_overlay, global_plan=global_plan,
-                label=f"Scene {scene_num} image prompt", max_retries=2
-            )
-            if not img_prompt:
-                print(f"  [X] SKIPPING Scene {scene_num}: Image prompt generation failed.")
-                return None
-            step(f"Scene {scene_num}: image prompt generated")
+            # --- 3a/3b. Generate one image per visual beat (fast visual cadence) ---
+            beats = [b for b in scene.get('visual_beats', []) if b] or [description]
+            beat_images = []
+            ref_image = local_prev_image_path
+            for beat_idx, beat in enumerate(beats):
+                print(f"Scene {scene_num}: Generating image prompt (beat {beat_idx + 1}/{len(beats)})...")
+                img_prompt = _retry(
+                    prompt_tool_fn, beat,
+                    visual_setup=visual_setup,
+                    visual_mode=scene.get('visual_mode', 'illustration'),
+                    text_overlay=text_overlay if beat_idx == 0 else '',
+                    global_plan=global_plan,
+                    label=f"Scene {scene_num} beat {beat_idx + 1} image prompt", max_retries=2
+                )
+                if not img_prompt:
+                    print(f"  [!] Beat {beat_idx + 1} prompt failed. Skipping this beat.")
+                    continue
 
-            # --- 3b. Generate Image (with retry) ---
-            print(f"Scene {scene_num}: Generating image...")
-            image_path = _retry(
-                image_gen_tool_fn, img_prompt,
-                reference_image_path=local_prev_image_path,
-                subject_reference_image_path=subject_image_path,
-                label=f"Scene {scene_num} image gen", max_retries=3, delay=8.0
-            )
-            
-            if not _is_valid_path(image_path):
+                print(f"Scene {scene_num}: Generating image (beat {beat_idx + 1}/{len(beats)})...")
+                image_path = _retry(
+                    image_gen_tool_fn, img_prompt,
+                    reference_image_path=ref_image,
+                    subject_reference_image_path=subject_image_path if beat_idx == 0 else None,
+                    verify_context=beat if scene.get('visual_mode') == 'diagram' else None,
+                    label=f"Scene {scene_num} beat {beat_idx + 1} image gen", max_retries=3, delay=8.0
+                )
+                if _is_valid_path(image_path):
+                    beat_images.append(image_path)
+                    ref_image = image_path
+                else:
+                    print(f"  [!] Beat {beat_idx + 1} image generation failed. Skipping this beat.")
+
+            if not beat_images:
                 print(f"  [X] SKIPPING Scene {scene_num}: Image generation failed — no valid image produced.")
                 return None
-                
-            current_image_path = image_path
-            step(f"Scene {scene_num}: image generated")
+
+            current_image_path = beat_images[-1]
+            step(f"Scene {scene_num}: image prompt generated")
+            step(f"Scene {scene_num}: images generated")
 
             # --- 3b.2. Veo Video Generation (if enabled) ---
             veo_video_path = None
@@ -261,28 +293,50 @@ def run_pipeline(user_context: str, do_research: bool = True, do_web_search: boo
                 else:
                     print(f"  [!] Veo video generation failed: {veo_res}. Continuing without Veo.")
 
-            # --- 3c. SAM Segmentation (non-critical, can fail gracefully) ---
-            seg_json_path = None
-            if not SAM_API_URL:
-                print(f"Scene {scene_num}: [INFO] SAM_API_URL is not configured (empty). Skipping SAM3 segmentation phase. Whiteboard animation will run in single-pass mode.")
-            else:
-                print(f"Scene {scene_num}: Segmenting image objects...")
-                try:
-                    seg_json_path = segmentation_tool_fn(current_image_path)
-                    if not _is_valid_path(seg_json_path):
-                        print(f"  [!] Segmentation returned no valid result. Continuing without segmentation.")
-                        seg_json_path = None
-                except Exception as e:
-                    print(f"  [!] Segmentation failed (non-critical): {e}. Continuing without segmentation.")
+            # --- 3c/3d. Segmentation + Whiteboard Animation per beat ---
+            seg_json_paths = []
+            beat_anim_paths = []
+            for beat_idx, beat_image in enumerate(beat_images):
+                seg_json_path = None
+                if not SAM_API_URL:
+                    if beat_idx == 0:
+                        print(f"Scene {scene_num}: [INFO] SAM_API_URL is not configured (empty). Skipping SAM3 segmentation phase. Whiteboard animation will run in single-pass mode.")
+                else:
+                    print(f"Scene {scene_num}: Segmenting image objects (beat {beat_idx + 1}/{len(beat_images)})...")
+                    try:
+                        seg_json_path = segmentation_tool_fn(beat_image)
+                        if not _is_valid_path(seg_json_path):
+                            print(f"  [!] Segmentation returned no valid result. Continuing without segmentation.")
+                            seg_json_path = None
+                    except Exception as e:
+                        print(f"  [!] Segmentation failed (non-critical): {e}. Continuing without segmentation.")
+                if seg_json_path:
+                    seg_json_paths.append(seg_json_path)
+
+                print(f"Scene {scene_num}: Generating whiteboard animation (beat {beat_idx + 1}/{len(beat_images)})...")
+                beat_anim = draw_animation_tool_fn(beat_image, segmentation_results_path=seg_json_path)
+                if _is_valid_path(beat_anim):
+                    beat_anim_paths.append(beat_anim)
+                else:
+                    print(f"  [!] Beat {beat_idx + 1} animation failed. Skipping this beat.")
             step(f"Scene {scene_num}: segmentation done")
 
-            # --- 3d. Whiteboard Animation Generation ---
-            print(f"Scene {scene_num}: Generating whiteboard animation...")
-            anim_video_path = draw_animation_tool_fn(current_image_path, segmentation_results_path=seg_json_path)
-
-            if not _is_valid_path(anim_video_path):
+            if not beat_anim_paths:
                 print(f"  [X] SKIPPING Scene {scene_num}: Animation generation failed.")
                 return None
+
+            if len(beat_anim_paths) > 1:
+                print(f"Scene {scene_num}: Concatenating {len(beat_anim_paths)} beat animations...")
+                try:
+                    anim_video_path = _concat_silent(
+                        beat_anim_paths,
+                        os.path.join(output_dir, f"scene_{scene_num}_anim_silent.mp4")
+                    )
+                except Exception as e:
+                    print(f"  [!] Beat concat failed: {e}. Falling back to first beat only.")
+                    anim_video_path = beat_anim_paths[0]
+            else:
+                anim_video_path = beat_anim_paths[0]
             step(f"Scene {scene_num}: animation generated")
 
             # --- 3d.2. Concatenate Whiteboard Animation and Veo video (if enabled) ---
@@ -383,8 +437,12 @@ def run_pipeline(user_context: str, do_research: bool = True, do_web_search: boo
 
             # --- Cleanup intermediate files ---
             files_to_delete = []
-            if seg_json_path and os.path.exists(seg_json_path):
-                files_to_delete.append(seg_json_path)
+            for sp in seg_json_paths:
+                if os.path.exists(sp):
+                    files_to_delete.append(sp)
+            for bp in beat_anim_paths:
+                if bp != anim_video_path and os.path.exists(bp):
+                    files_to_delete.append(bp)
             if anim_video_path and os.path.exists(anim_video_path):
                 files_to_delete.append(anim_video_path)
             if veo_video_path and os.path.exists(veo_video_path):

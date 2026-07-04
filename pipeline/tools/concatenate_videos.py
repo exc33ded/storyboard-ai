@@ -3,7 +3,7 @@ import os
 
 from .merge_audio_video import get_duration
 
-FADE_SEC = 0.3
+FADE_SEC = 0.7
 
 
 def concatenate_videos_tool_fn(video_paths: list, output_path: str = "concatenated_output.mp4") -> str:
@@ -56,7 +56,7 @@ def concatenate_videos_tool_fn(video_paths: list, output_path: str = "concatenat
         v_out = "[v]" if i == n - 1 else f"[vx{i}]"
         a_out = "[a]" if i == n - 1 else f"[ax{i}]"
         parts.append(
-            f"{v_prev}[v{i}]xfade=transition=fade:duration={FADE_SEC}:offset={offset:.3f}{v_out}"
+            f"{v_prev}[v{i}]xfade=transition=fadeblack:duration={FADE_SEC}:offset={offset:.3f}{v_out}"
         )
         parts.append(f"{a_prev}[a{i}]acrossfade=d={FADE_SEC}{a_out}")
         v_prev, a_prev = v_out, a_out

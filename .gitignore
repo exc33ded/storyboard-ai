@@ -152,3 +152,10 @@ old/
 .claude/
 .serena/
 node_modules/
+
+# graphify knowledge-graph output
+graphify-out/
+.graphify_uncached.txt
+
+# puter session (contains auth token)
+pipeline/tools/puter/puter-session/

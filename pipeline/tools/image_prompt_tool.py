@@ -1,7 +1,7 @@
 from config import TEXT_MODEL, TEXT_EXTRA_BODY
 from .utils import text_client, _save_to_run_folder
 
-def prompt_tool_fn(scene_description: str, visual_setup: str = "", text_overlay: str = "", global_plan: dict = None) -> str:
+def prompt_tool_fn(scene_description: str, visual_setup: str = "", text_overlay: str = "", global_plan: dict = None, visual_mode: str = "illustration") -> str:
     """
     Generates an image prompt for a whiteboard animation frame using Nano Banana guidelines.
     
@@ -25,6 +25,25 @@ def prompt_tool_fn(scene_description: str, visual_setup: str = "", text_overlay:
         tone_guidance = "The visual should be expressive, using dynamic framing and bold focus."
     else:
         tone_guidance = "The visual should be engaging and clear."
+
+    mode_guidance = ""
+    if visual_mode == "diagram":
+        mode_guidance = """
+    DIAGRAM MODE (CRITICAL — this scene is a TECHNICAL DIAGRAM, not an artistic illustration):
+    - Reproduce the structure in the scene description EXACTLY: every box, arrow, node, index, and label.
+    - All labels must be rendered as exact quoted text (e.g. a bucket labeled "2", a node labeled "cat: 9").
+    - Arrows must clearly connect the correct elements in the correct direction.
+    - Layout must be clean and schematic, like a textbook figure drawn on a whiteboard.
+    - DO NOT invent extra objects, machines, characters, or metaphors. Nothing beyond the described structure.
+    - DO NOT simplify away or merge any described element.
+    """
+    else:
+        recurring = (global_plan or {}).get("recurring_elements", "")
+        if recurring:
+            mode_guidance = f"""
+    RECURRING ELEMENTS (for visual consistency across scenes):
+    If the scene features any of these, draw them EXACTLY as described: {recurring}
+    """
 
     text_guidance = ""
     if text_overlay:
@@ -61,6 +80,7 @@ def prompt_tool_fn(scene_description: str, visual_setup: str = "", text_overlay:
     - Subject / Description: "{scene_description}"
     - Action / Setup: "{visual_setup}"
     - Tone: {tone} ({tone_guidance})
+    {mode_guidance}
     {text_guidance}
     
     CONSTRUCT the final image generation prompt starting directly with [Subject] and following the formula implicitly. Ensure the Style section strictly describes the whiteboard marker, flat strokes, selective color, and clean white background without blending styles or becoming overly complex. Make sure if text is included, to wrap it in exact double quotes "like this" and specify the font.
