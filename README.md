@@ -50,7 +50,7 @@ pyproject.toml     Project metadata + dependencies (managed with uv)
 - **Docker** (optional) — only for the self-hosted SearXNG search engine
 - **API keys** (all have free options):
   - A text LLM: any OpenAI-compatible endpoint — free options include Ollama/LM Studio (local) or Groq/DeepSeek free tiers
-  - `HF_API_KEY` — Hugging Face token for FLUX image generation
+  - Image generation (at least one): `PUTER_AUTH_TOKEN` — free [Puter](https://puter.com) account (primary; FLUX first, then other models). Get the token with `node pipeline/tools/puter/puter_gen.mjs login` (needs Node.js). And/or `HF_API_KEY` — Hugging Face token for FLUX (fallback, free monthly credits).
   - `VISION_API_KEY` — a vision-capable model (Groq's free tier works) — only needed if your text model can't see images
   - `GEMINI_API_KEY` — **optional**, only for Veo AI-video segments
 

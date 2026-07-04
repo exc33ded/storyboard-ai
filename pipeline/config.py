@@ -31,6 +31,15 @@ VISION_MODEL = os.getenv("VISION_MODEL", "meta-llama/llama-4-scout-17b-16e-instr
 HF_API_KEY = os.getenv("HF_API_KEY")
 IMAGE_GEN_MODEL = os.getenv("IMAGE_GEN_MODEL", "black-forest-labs/FLUX.1-schnell")
 
+# Primary image gen: Puter (unofficial drivers API, browser SDK's own endpoint).
+# Token: log in at puter.com → DevTools → Application → Local Storage → puter.auth.token
+PUTER_AUTH_TOKEN = os.getenv("PUTER_AUTH_TOKEN")
+# Comma-separated priority list — first model that works is used.
+PUTER_IMAGE_MODELS = os.getenv(
+    "PUTER_IMAGE_MODELS",
+    "black-forest-labs/flux-schnell,gpt-image-1-mini,gemini-3.1-flash-image-preview",
+)
+
 # --- TTS: Kokoro (local, open-source, CPU-friendly) ---
 # Measured speaking pace of Kokoro's default voices — used to size narration
 # scripts against a target video length. Re-measure if you change voices.
@@ -61,5 +70,5 @@ SAM_API_URL = ""
 
 if not TEXT_API_KEY or TEXT_API_KEY == "not-needed" and not TEXT_BASE_URL:
     print("WARNING: TEXT_API_KEY not set and no local TEXT_BASE_URL configured.")
-if not HF_API_KEY:
-    print("WARNING: HF_API_KEY not found — image generation will fail.")
+if not PUTER_AUTH_TOKEN and not HF_API_KEY:
+    print("WARNING: neither PUTER_AUTH_TOKEN nor HF_API_KEY set — image generation will fail.")

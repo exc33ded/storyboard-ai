@@ -151,3 +151,4 @@ old/
 .agents/
 .claude/
 .serena/
+node_modules/
