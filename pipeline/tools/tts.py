@@ -24,12 +24,45 @@ def _synthesize(text: str, voice: str, speed: float = 1.0) -> np.ndarray:
     return np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
 
 
-def _strip_cues(text: str) -> str:
-    """Remove bracketed stage directions like [pause] — TTS reads them literally.
-    A cue becomes a comma so the spoken rhythm keeps a natural beat."""
-    text = re.sub(r"\s*\[[^\]]*\]\s*", ", ", text)
-    text = re.sub(r"([,.!?;:])\s*,", r"\1", text)  # no double punctuation
-    return text.strip().lstrip(",").strip()
+SAMPLE_RATE = 24000
+_CUE_RE = re.compile(r"\[([^\]]{1,40})\]")
+
+
+def _cue_effect(name: str):
+    """Map a bracketed stage cue to (silence_seconds, volume, speed_multiplier).
+    volume/speed apply to the text chunk that follows the cue, until the next cue."""
+    name = name.lower()
+    if "long pause" in name:
+        return 1.0, None, None
+    if "pause" in name or "beat" in name or "silence" in name:
+        return 0.6, None, None
+    if any(w in name for w in ("softly", "quietly", "whisper", "gently", "hushed")):
+        return 0.15, 0.55, 0.92
+    if any(w in name for w in ("slowly", "solemn", "somber", "gravely")):
+        return 0.0, None, 0.85
+    if any(w in name for w in ("quickly", "fast", "urgent", "excited", "energetic")):
+        return 0.0, None, 1.12
+    # unknown cue: don't speak it, just take a small breath
+    return 0.3, None, None
+
+
+def _synthesize_with_cues(text: str, voice: str, speed: float) -> np.ndarray:
+    """Synthesize text, honoring [pause]/[softly]/[slowly]-style stage cues:
+    pauses become real silence; delivery cues adjust volume/speed of the
+    following chunk (reset at the next cue). Cues are never spoken."""
+    segments = []
+    volume, spd = 1.0, speed
+    parts = _CUE_RE.split(text)  # [text, cue, text, cue, text, ...]
+    for i, part in enumerate(parts):
+        if i % 2 == 1:  # a cue
+            silence, volume, spd_mult = _cue_effect(part)
+            volume = volume if volume is not None else 1.0
+            spd = speed * spd_mult if spd_mult is not None else speed
+            if silence:
+                segments.append(np.zeros(int(silence * SAMPLE_RATE), dtype=np.float32))
+        elif part.strip():
+            segments.append(_synthesize(part.strip(), voice, spd) * volume)
+    return np.concatenate(segments) if segments else np.zeros(0, dtype=np.float32)
 
 
 def generate_tts_audio_tool_fn(text: str, speaker_one: str = None, speaker_two: str = None, language: str = "english",
@@ -50,7 +83,6 @@ def generate_tts_audio_tool_fn(text: str, speaker_one: str = None, speaker_two: 
         The path to the generated .wav file or an error message.
     """
     print(f"Generating TTS for: {text[:50]}...")
-    text = _strip_cues(text)
     v_one = voice_one or KOKORO_VOICE_SPEAKER_ONE
     v_two = voice_two or KOKORO_VOICE_SPEAKER_TWO
 
@@ -71,11 +103,11 @@ def generate_tts_audio_tool_fn(text: str, speaker_one: str = None, speaker_two: 
                 match = re.match(r"^([^:]+):\s*(.+)$", line)
                 if match and match.group(1) in voice_map:
                     speaker, spoken = match.groups()
-                    segments.append(_synthesize(spoken, voice_map[speaker], speed))
+                    segments.append(_synthesize_with_cues(spoken, voice_map[speaker], speed))
                 else:
-                    segments.append(_synthesize(line, v_one, speed))
+                    segments.append(_synthesize_with_cues(line, v_one, speed))
         else:
-            segments.append(_synthesize(text, v_one, speed))
+            segments.append(_synthesize_with_cues(text, v_one, speed))
 
         audio = np.concatenate(segments) if segments else np.zeros(0, dtype=np.float32)
         if audio.size == 0:
