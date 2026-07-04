@@ -516,36 +516,8 @@
           <option value="bm_fable">Fable</option>
         </optgroup>
       </select>
-      <div class="hint">Used for all narration, and the first speaker in dialogues.</div>
+      <div class="hint">Used for all narration.</div>
       <button type="button" class="ghost listen-btn" data-target="voice-one" style="margin-top:10px">▶ Listen</button>
-    </div>
-
-    <div class="field">
-      <label for="voice-two">Second speaker</label>
-      <select id="voice-two">
-        <optgroup label="Male · American">
-          <option value="am_puck">Puck — lively (default)</option>
-          <option value="am_onyx">Onyx — deep</option>
-          <option value="am_michael">Michael — steady</option>
-          <option value="am_adam">Adam — bold</option>
-        </optgroup>
-        <optgroup label="Female · American">
-          <option value="af_heart">Heart — warm</option>
-          <option value="af_bella">Bella — bright</option>
-          <option value="af_nicole">Nicole — soft, ASMR-like</option>
-          <option value="af_sarah">Sarah — clear</option>
-        </optgroup>
-        <optgroup label="Female · British">
-          <option value="bf_emma">Emma</option>
-          <option value="bf_isabella">Isabella</option>
-        </optgroup>
-        <optgroup label="Male · British">
-          <option value="bm_george">George — deep</option>
-          <option value="bm_fable">Fable</option>
-        </optgroup>
-      </select>
-      <div class="hint">Only used when a scene has two-person dialogue.</div>
-      <button type="button" class="ghost listen-btn" data-target="voice-two" style="margin-top:10px">▶ Listen</button>
     </div>
 
     <div class="field">
@@ -703,7 +675,6 @@
       language: document.getElementById('language').value || 'english',
       target_duration_minutes: parseFloat(document.getElementById('target_duration').value) || null,
       voice_one: voiceOne.value,
-      voice_two: voiceTwo.value,
       tts_speed: parseFloat(ttsSpeed.value),
       enable_veo: false,
       veo_direction_by_director: false,
@@ -723,7 +694,6 @@
   const voiceDrawer = document.getElementById('voice-drawer');
   const voiceBackdrop = document.getElementById('voice-backdrop');
   const voiceOne = document.getElementById('voice-one');
-  const voiceTwo = document.getElementById('voice-two');
   const ttsSpeed = document.getElementById('tts-speed');
   const speedVal = document.getElementById('speed-val');
 
@@ -740,16 +710,15 @@
   try {
     const saved = JSON.parse(localStorage.getItem('voiceSettings') || '{}');
     if (saved.voice_one) voiceOne.value = saved.voice_one;
-    if (saved.voice_two) voiceTwo.value = saved.voice_two;
     if (saved.tts_speed) ttsSpeed.value = saved.tts_speed;
   } catch (e) {}
   function saveVoice() {
     speedVal.textContent = parseFloat(ttsSpeed.value).toFixed(2).replace(/0$/, '') + '×';
     localStorage.setItem('voiceSettings', JSON.stringify({
-      voice_one: voiceOne.value, voice_two: voiceTwo.value, tts_speed: ttsSpeed.value,
+      voice_one: voiceOne.value, tts_speed: ttsSpeed.value,
     }));
   }
-  [voiceOne, voiceTwo, ttsSpeed].forEach(el => el.addEventListener('input', saveVoice));
+  [voiceOne, ttsSpeed].forEach(el => el.addEventListener('input', saveVoice));
 
   // voice preview
   let previewAudio = null;
